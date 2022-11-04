@@ -1,44 +1,111 @@
-addEventListener('fetch', (event) => {
-    event.respondWith(
-        handleRequest(event.request).catch(
-            (err) => new Response(err.stack, { status: 500 })
-        )
-    );
-});
+/*
+# Zepp Life 自定义步数
+
+在 Workers 中创建一个新的 Worker，将文件内容粘贴保存并修改账户配置
+
+Workers 使用 UTC 时区，设置 Cron 触发器为 `5 16 * * *` 等于北京时间每天 0 点 5 分
+
+## URL 拼接
+
+```
+#  curl 命令组成
+curl -G "https://你的域名/?min_step=最小步数&max_step=最大步数" --data-urlencode "user=你的用户名" --data-urlencode "password=密码" 
+
+# 其中   user   传参，为你的用户名，支持手机号和邮箱
+# 其中 password 传参，为你的密码
+
+# 示例：手机号
+curl -G "https://api.abc.workers.dev/?min_step=16800&max_step=32800" --data-urlencode "user=13800000000" --data-urlencode "password=ABCDABCD12341234"
+
+# 示例：邮箱
+curl -G "https://api.abc.workers.dev/?min_step=16800&max_step=32800" --data-urlencode "user=qq@qq.com" --data-urlencode "password=ABCDABCD12341234"
+
+# 浏览器直接访问示例，请注意对传参值的部分进行 URL Encode
+https://api.abc.workers.dev/?min_step=16800&max_step=32800&user=13800000000&password=ABCDABCD12341234
+
+https://api.abc.workers.dev/?min_step=16800&max_step=32800&user=qq%40qq.com&password=ABCDABCD12341234
+```
+*/
 
 /**
+ * Cron 任务
+ * 
+ * @param {Event} event
+ * 
+ * @returns {Promise<void>}
+ */
+ async function triggerEvent(event) {
+    console.log(new Date().toLocaleString('zh-CN'))
+
+    const users = [
+        // {
+        //     user: '13800000000',
+        //     password: 'ABCDABCD12341234',
+        //     min_step: '16800',
+        //     max_step: '32800',
+        // },
+        // {
+        //     user: 'qq@qq.com',
+        //     password: 'ABCDABCD12341234',
+        //     min_step: '16800',
+        //     max_step: '32800',
+        // },
+    ];
+
+    for (let i in users) {
+        await change_step(users[i].user, users[i].password, users[i].min_step, users[i].max_step);
+    }
+}
+
+/**
+ * HTTP 请求
+ * 
  * @param {Request} request
  * 
  * @returns {Promise<Response>}
  */
 async function handleRequest(request) {
-    const {searchParams} = new URL(request.url);
+    const { searchParams } = new URL(request.url);
     const user = searchParams.get('user');
     const password = searchParams.get('password');
     if (user === null || password === null) {
         return new Response('用户名或密码未填写');
     }
+    const min_step = searchParams.get('min_step') ?? 16800;
+    const max_step = searchParams.get('max_step') ?? 32800;
+    return new Response(
+        await change_step(user, password, min_step, max_step)
+    );
+}
+
+/**
+ * 修改步数
+ *
+ * @param {string} code
+ * @param {string} type
+ * @param {string} min_step
+ * @param {string} max_step
+ */
+async function change_step(user, password, min_step, max_step) {
+    let type = '';
     const email_valid = /^(\w-*\.*)+@(\w-?)+(\.\w{2,})+$/;
     const phone_valid = /^1[3456789]\d{9}$/;
-    let type = '';
     if (email_valid.test(user)) {
         type = 'email';
     } else {
         if (!phone_valid.test(user)) {
-            return new Response('用户名填写错误，手机号或邮箱格式不正确');
+            return '用户名填写错误，手机号或邮箱格式不正确';
         }
         type = 'huami_phone';
     }
-    const min_step = searchParams.get('min_step') ?? 16800;
-    const max_step = searchParams.get('max_step') ?? 32800;
     const step = Math.floor(Math.random() * (Math.floor(max_step) - Math.ceil(min_step))) + Math.ceil(min_step);
     const code = await get_access(user, password, type);
     if (code.ok === false) {
-        return new Response(code.data);
+        return code.data;
     }
     const user_info = await get_user_info(code.data, type);
     if (user_info.ok === false) {
-        return new Response(user_info.data);
+        return user_info.data;
     }
     return await fetch(
         'https://api-mifit-cn.huami.com/v1/data/band_data.json?&t=' + Date.now(),
@@ -84,17 +151,13 @@ async function handleRequest(request) {
         }
     ).then(
         data => {
-            return new Response(
-                data.code === 1 && data.message === 'success'
-                    ? '修改成功，步数为：' + step
-                    : '修改失败'
-            );
+            return data.code === 1 && data.message === 'success'
+                ? '修改成功，步数为：' + step
+                : '修改失败';
         }
     ).catch(
         error => {
-            return new Response(
-                error
-            );
+            return error;
         }
     );
 }
@@ -104,8 +167,6 @@ async function handleRequest(request) {
  *
  * @param {string} code
  * @param {string} type
- *
- * @returns {object}
  */
 async function get_user_info(code, type) {
     return await fetch(
@@ -160,8 +221,6 @@ async function get_user_info(code, type) {
  * @param {string} user
  * @param {string} password
  * @param {string} type
- *
- * @returns {object}
  */
 async function get_access(user, password, type) {
     const User = type === 'huami_phone' ? '+86' + user : user;
@@ -239,3 +298,15 @@ Date.prototype.format = function (fmt) {
     }
     return fmt;
 }
+
+addEventListener('fetch', (event) => {
+    event.respondWith(
+        handleRequest(event.request).catch(
+            (err) => new Response(err.stack, { status: 500 })
+        )
+    );
+});
+
+addEventListener('scheduled', (event) => {
+    event.waitUntil(triggerEvent(event));
+});

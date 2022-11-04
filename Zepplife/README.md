@@ -1,9 +1,8 @@
+# Zepp Life 自定义步数
 
-# Zepp Life
+在 Workers 中创建一个新的 Worker，将文件内容粘贴保存并修改账户配置
 
-## 自定义步数
-
-在 Workers 中创建一个新的 Worker，将文件内容粘贴进去保存
+Workers 使用 UTC 时区，设置 Cron 触发器为 `5 16 * * *` 等于北京时间每天 0 点 5 分
 
 ## URL 拼接
 

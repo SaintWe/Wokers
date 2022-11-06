@@ -9,6 +9,8 @@
 
 ### 如果你使用腾讯云 (DNSPOD)
 
+服务提供商设置为：**DNSPOD**
+
 - 在 [DNSPod 密钥](https://console.dnspod.cn/account/token/token)，创建一个密钥，记录下 ID 和 Token
 - 在 Worker 的环境变量中设置以下
 - **DNSPOD_ID** 为 上面的 ID
@@ -16,11 +18,23 @@
 
 ### 如果你使用阿里云 (ALIYUN)
 
+服务提供商设置为：**ALIYUN**
+
 - 阿里云的密钥创建较为复杂，涉及 RAM 角色创建，您自行查找相关教程
 - 在阿里云的密钥管理创建一个密钥，需给予 **云解析 DNS 的 full 授权**，记录下 Access Key ID 和 Access Key Secret
 - 在 Worker 的环境变量中设置以下
 - **ALIYUN_ID** 为 上面的 Access Key ID
 - **ALIYUN_SECRET** 为 上面的 Access Key Secret
+
+### 如果你使用 CloudFlare (CLOUDFLARE)
+
+服务提供商设置为：**CLOUDFLARE**
+
+- 在 <https://dash.cloudflare.com/profile/api-tokens>，创建一个 API 令牌（API Token）
+- 选择 编辑区域 DNS（Edit zone DNS），权限选择 **编辑**，其他自行选择
+- 记录下 Token
+- 在 Worker 的环境变量中设置以下
+- **CLOUDFLARE_TOKEN** 为 上面的 Token
 
 ## URL 拼接
 
